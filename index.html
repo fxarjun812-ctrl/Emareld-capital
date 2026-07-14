@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emerald Capital | Trading Terminal</title>
+    <title>Emerald Capital | Pro Terminal</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase Compat SDKs -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <!-- Lightweight Charts (For Exness style execution lines) -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 
     <script>
         tailwind.config = {
@@ -31,7 +34,9 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0B0E14; }
         ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 4px; }
-        #tv-container { height: 500px; width: 100%; }
+        #tv-chart { height: 500px; width: 100%; border-radius: 0.75rem; overflow: hidden; }
+        .flash-text { animation: flash 0.5s ease; }
+        @keyframes flash { 0% { color: #fff; } 100% { color: inherit; } }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -39,14 +44,10 @@
     <!-- ================= 1. LOGIN PAGE ================= -->
     <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-dark-900">
         <div class="glass-panel p-10 rounded-2xl shadow-2xl text-center w-full max-w-md border border-gray-800">
-            <div class="mb-8">
-                <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500 mb-2">Emerald Capital</h1>
-                <p class="text-gray-400">Institutional Grade Trading Terminal</p>
-            </div>
-            
-            <button onclick="loginWithGoogle()" class="w-full bg-white text-gray-900 font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-100 transition-all duration-300 shadow-lg">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google">
-                Sign in with Google
+            <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500 mb-2">Emerald Capital</h1>
+            <p class="text-gray-400 mb-8">Institutional Grade Trading Terminal</p>
+            <button onclick="loginWithGoogle()" class="w-full bg-white text-gray-900 font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-100 transition-all shadow-lg">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google"> Sign in with Google
             </button>
             <p id="login-error" class="text-red-500 text-sm mt-4 hidden-section"></p>
         </div>
@@ -62,18 +63,10 @@
                     <h2 class="text-2xl font-bold text-emerald-500">Emerald</h2>
                 </div>
                 <nav class="p-4 space-y-2">
-                    <button onclick="switchTab('dashboard')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
-                        <i class="fas fa-chart-pie w-5"></i> Dashboard
-                    </button>
-                    <button onclick="switchTab('terminal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
-                        <i class="fas fa-chart-line w-5"></i> Terminal
-                    </button>
-                    <button onclick="switchTab('journal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
-                        <i class="fas fa-book w-5"></i> Trade Journal
-                    </button>
-                    <button onclick="switchTab('funds')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
-                        <i class="fas fa-wallet w-5"></i> Funds
-                    </button>
+                    <button onclick="switchTab('dashboard')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300"><i class="fas fa-chart-pie w-5"></i> Dashboard</button>
+                    <button onclick="switchTab('terminal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300"><i class="fas fa-chart-line w-5"></i> Terminal</button>
+                    <button onclick="switchTab('journal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300"><i class="fas fa-book w-5"></i> Trade Journal</button>
+                    <button onclick="switchTab('funds')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300"><i class="fas fa-wallet w-5"></i> Funds</button>
                 </nav>
             </div>
             <div class="p-4 border-t border-gray-800">
@@ -92,67 +85,51 @@
         <div class="flex-1 overflow-y-auto p-8 bg-dark-900">
             
             <!-- DASHBOARD TAB -->
-            <div id="tab-dashboard" class="tab-content">
+            <div id="tab-dashboard" class="tab-content hidden-section">
                 <h2 class="text-3xl font-bold mb-6">Overview</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="glass-panel p-6 rounded-xl border border-gray-800">
                         <p class="text-gray-400 text-sm">Account Balance</p>
-                        <h3 class="text-3xl font-bold text-white mt-2">$0.00</h3>
+                        <h3 id="dash-balance" class="text-3xl font-bold text-white mt-2">$10,000.00</h3>
                     </div>
                     <div class="glass-panel p-6 rounded-xl border border-gray-800">
-                        <p class="text-gray-400 text-sm">Equity</p>
-                        <h3 class="text-3xl font-bold text-emerald-400 mt-2">$0.00</h3>
+                        <p class="text-gray-400 text-sm">Live Equity</p>
+                        <h3 id="dash-equity" class="text-3xl font-bold text-emerald-400 mt-2">$10,000.00</h3>
                     </div>
                     <div class="glass-panel p-6 rounded-xl border border-gray-800">
-                        <p class="text-gray-400 text-sm">Closed Trades</p>
-                        <h3 id="total-trades-stat" class="text-3xl font-bold text-white mt-2">0</h3>
+                        <p class="text-gray-400 text-sm">Used Margin</p>
+                        <h3 id="dash-margin" class="text-3xl font-bold text-white mt-2">$0.00</h3>
                     </div>
                 </div>
             </div>
 
             <!-- TERMINAL TAB -->
-            <div id="tab-terminal" class="tab-content hidden-section">
+            <div id="tab-terminal" class="tab-content">
                 <div class="flex justify-between items-end mb-4">
-                    <h2 class="text-3xl font-bold">XAUUSD Terminal</h2>
-                    <span class="text-xs bg-dark-800 px-3 py-1 rounded-full text-gray-400 border border-gray-700">Fixed Spread: 0.05</span>
+                    <div>
+                        <h2 class="text-3xl font-bold">XAUUSD Live Terminal</h2>
+                        <div class="flex gap-4 mt-2 text-sm font-mono">
+                            <span class="text-gray-400">Bal: <span id="term-balance" class="text-white">$10,000.00</span></span>
+                            <span class="text-gray-400">Eq: <span id="term-equity" class="text-emerald-400">$10,000.00</span></span>
+                            <span class="text-gray-400">Live Server Price: <span id="live-price-display" class="text-yellow-400 font-bold flash-text">Connecting...</span></span>
+                        </div>
+                    </div>
+                    <span id="conn-status" class="text-xs bg-yellow-900 text-yellow-400 px-3 py-1 rounded-full border border-yellow-700">Initializing...</span>
                 </div>
                 
-                <!-- TRADINGVIEW WIDGET -->
-                <div class="w-full bg-dark-800 rounded-xl border border-gray-700 mb-6 overflow-hidden shadow-inner" id="tv-container">
-                    <div class="tradingview-widget-container" style="height:100%;width:100%">
-                        <div id="tradingview_xauusd" style="height:calc(100% - 32px);width:100%"></div>
-                        <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-                        <script type="text/javascript">
-                        new TradingView.widget(
-                        {
-                            "autosize": true,
-                            "symbol": "OANDA:XAUUSD",
-                            "interval": "15",
-                            "timezone": "Asia/Kolkata",
-                            "theme": "dark",
-                            "style": "1",
-                            "locale": "en",
-                            "enable_publishing": false,
-                            "backgroundColor": "#151924",
-                            "gridColor": "#1F2937",
-                            "hide_top_toolbar": false,
-                            "hide_side_toolbar": false, // ENABLED DRAWING TOOLS (Left Sidebar)
-                            "save_image": false,
-                            "container_id": "tradingview_xauusd"
-                        }
-                        );
-                        </script>
-                    </div>
+                <!-- LIGHTWEIGHT CHART CONTAINER -->
+                <div class="w-full bg-dark-800 border border-gray-700 mb-6 shadow-inner relative" id="tv-chart">
+                    <!-- Chart renders here -->
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 max-w-md mb-8">
-                    <button onclick="openTrade('SELL')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-red-500/20 transition-all">SELL (Bid)</button>
-                    <button onclick="openTrade('BUY')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-emerald-500/20 transition-all">BUY (Ask)</button>
+                    <button onclick="executeTrade('SELL')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-red-500/20 transition-all text-xl">SELL (Bid)</button>
+                    <button onclick="executeTrade('BUY')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-emerald-500/20 transition-all text-xl">BUY (Ask)</button>
                 </div>
 
                 <!-- ACTIVE TRADES TABLE -->
                 <div>
-                    <h3 class="text-xl font-bold mb-4">Active Positions</h3>
+                    <h3 class="text-xl font-bold mb-4 border-b border-gray-800 pb-2">Active Positions</h3>
                     <div class="glass-panel rounded-xl border border-gray-800 overflow-hidden">
                         <table class="w-full text-left border-collapse">
                             <thead>
@@ -160,11 +137,12 @@
                                     <th class="p-4 font-semibold text-gray-300">Symbol</th>
                                     <th class="p-4 font-semibold text-gray-300">Action</th>
                                     <th class="p-4 font-semibold text-gray-300">Entry Price</th>
+                                    <th class="p-4 font-semibold text-gray-300">Live PnL</th>
                                     <th class="p-4 font-semibold text-gray-300 text-right">Close</th>
                                 </tr>
                             </thead>
                             <tbody id="active-trades-body">
-                                <tr><td colspan="4" class="p-4 text-center text-gray-500">No active trades.</td></tr>
+                                <tr><td colspan="5" class="p-4 text-center text-gray-500">No active trades.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -175,20 +153,19 @@
             <div id="tab-journal" class="tab-content hidden-section">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-3xl font-bold">Trade Journal History</h2>
-                    <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-all">
+                    <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
                         <i class="fas fa-file-excel"></i> Export to Excel
                     </button>
                 </div>
-                
                 <div class="glass-panel rounded-xl border border-gray-800 overflow-hidden">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-dark-800 border-b border-gray-700">
                                 <th class="p-4 font-semibold text-gray-300">Time (IST)</th>
-                                <th class="p-4 font-semibold text-gray-300">Symbol</th>
                                 <th class="p-4 font-semibold text-gray-300">Action</th>
-                                <th class="p-4 font-semibold text-gray-300">Entry Price</th>
-                                <th class="p-4 font-semibold text-gray-300">Close Price</th>
+                                <th class="p-4 font-semibold text-gray-300">Entry</th>
+                                <th class="p-4 font-semibold text-gray-300">Close</th>
+                                <th class="p-4 font-semibold text-gray-300">Net PnL</th>
                             </tr>
                         </thead>
                         <tbody id="journal-body">
@@ -197,57 +174,31 @@
                     </table>
                 </div>
             </div>
-
+            
             <!-- FUNDS TAB -->
             <div id="tab-funds" class="tab-content hidden-section">
-                <!-- Keep existing funds structure -->
                 <h2 class="text-3xl font-bold mb-6">Funds Management</h2>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- DEPOSIT -->
-                    <div class="glass-panel p-8 rounded-xl border border-gray-800 relative">
-                        <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Deposit Funds</h3>
-                        <label class="block text-sm text-gray-400 mb-2">Select Method</label>
-                        <select id="payment-method" onchange="showPaymentDetails()" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-6 focus:ring-2 focus:ring-emerald-500 outline-none">
-                            <option value="">Choose...</option>
-                            <option value="upi">UPI</option>
-                            <option value="bank">Bank Transfer</option>
-                            <option value="crypto">Crypto (USDT TRC20)</option>
-                        </select>
-                        <div id="deposit-form" class="hidden-section">
-                            <label class="block text-sm text-gray-400 mb-2">Amount ($)</label>
-                            <input type="number" id="deposit-amount" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0.00">
-                            <div id="payment-details" class="bg-dark-900 border border-gray-700 p-4 rounded-lg mb-6 text-sm text-gray-300 font-mono"></div>
-                            <button onclick="submitPayment()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg transition-all">I Have Paid</button>
-                        </div>
-                    </div>
-                    <!-- WITHDRAW -->
-                    <div class="glass-panel p-8 rounded-xl border border-gray-800">
-                        <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Withdraw Funds</h3>
-                        <div class="bg-blue-900/20 border border-blue-500/30 text-blue-400 p-4 rounded-lg mb-6 text-sm flex items-start gap-3">
-                            <i class="fas fa-info-circle mt-1"></i>
-                            <p><strong>Withdrawal Policy:</strong> Max 10% withdrawal per month.</p>
-                        </div>
-                        <label class="block text-sm text-gray-400 mb-2">Amount to Withdraw ($)</label>
-                        <input type="number" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-6 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00">
-                        <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg transition-all">Request Withdrawal</button>
-                    </div>
+                <div class="glass-panel p-8 rounded-xl border border-gray-800 max-w-xl">
+                    <p class="text-gray-400">Demo Environment Active. Withdrawals disabled for trial.</p>
                 </div>
             </div>
+
         </div>
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
+        // ==========================================
+        // 1. FIREBASE AUTHENTICATION
+        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyA5L7rCBjooJNdnpO1BqiUhauUAynBlvp8",
             authDomain: "emareld-capital.firebaseapp.com",
             projectId: "emareld-capital",
             storageBucket: "emareld-capital.firebasestorage.app",
             messagingSenderId: "749956592504",
-            appId: "1:749956592504:web:af04a072a3b74553c9ce8d",
-            measurementId: "G-HL8BDPYCNX"
+            appId: "1:749956592504:web:af04a072a3b74553c9ce8d"
         };
-        
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -258,38 +209,148 @@
                 document.getElementById('main-app').classList.remove('hidden-section');
                 document.getElementById('user-name').innerText = user.displayName;
                 document.getElementById('user-avatar').src = user.photoURL;
-                switchTab('terminal'); 
+                switchTab('terminal');
+                initTerminal(); // Start chart & data when logged in
             } else {
                 document.getElementById('login-screen').classList.remove('hidden-section');
                 document.getElementById('main-app').classList.add('hidden-section');
             }
         });
 
-        function loginWithGoogle() { auth.signInWithPopup(provider).catch(e => console.error(e)); }
+        function loginWithGoogle() { auth.signInWithPopup(provider); }
         function logout() { auth.signOut(); }
-
         function switchTab(tabId) {
-            const tabs = document.querySelectorAll('.tab-content');
-            tabs.forEach(tab => tab.classList.add('hidden-section'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden-section'));
             document.getElementById('tab-' + tabId).classList.remove('hidden-section');
         }
 
         // ==========================================
-        // TRADE EXECUTION, ACTIVE TRADES & JOURNAL LOGIC
+        // 2. LIGHTWEIGHT CHART & TWELVE DATA API
+        // ==========================================
+        const API_KEY = "679dd1fdad034b8ba5a8bc4b2b34a44e";
+        const SYMBOL = "XAU/USD";
+        
+        let chart, candleSeries;
+        let livePrice = 0.00;
+        let currentCandle = null;
+        let isTerminalReady = false;
+
+        function initTerminal() {
+            if (isTerminalReady) return;
+            
+            // Create Chart Object
+            chart = LightweightCharts.createChart(document.getElementById('tv-chart'), {
+                layout: { background: { color: '#151924' }, textColor: '#d1d4dc' },
+                grid: { vertLines: { color: '#1F2937' }, horzLines: { color: '#1F2937' } },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                timeScale: { timeVisible: true, secondsVisible: false }
+            });
+
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#10b981', downColor: '#ef4444', 
+                borderVisible: false, 
+                wickUpColor: '#10b981', wickDownColor: '#ef4444'
+            });
+
+            fetchHistoricalData();
+            isTerminalReady = true;
+        }
+
+        async function fetchHistoricalData() {
+            try {
+                // Fetch past 1-minute candles from Twelve Data REST API
+                const response = await fetch(`https://api.twelvedata.com/time_series?symbol=${SYMBOL}&interval=1min&outputsize=150&apikey=${API_KEY}`);
+                const data = await response.json();
+                
+                if (data.values) {
+                    // Twelve Data sends newest first, we need oldest first for the chart
+                    const chartData = data.values.reverse().map(d => ({
+                        time: new Date(d.datetime).getTime() / 1000,
+                        open: parseFloat(d.open),
+                        high: parseFloat(d.high),
+                        low: parseFloat(d.low),
+                        close: parseFloat(d.close)
+                    }));
+                    
+                    candleSeries.setData(chartData);
+                    currentCandle = chartData[chartData.length - 1]; // Save the latest candle reference
+                    
+                    startLiveWebSocket();
+                }
+            } catch (error) {
+                console.error("Error loading history:", error);
+            }
+        }
+
+        function startLiveWebSocket() {
+            const statusBadge = document.getElementById('conn-status');
+            const ws = new WebSocket(`wss://ws.twelvedata.com/v1/quotes/price?apikey=${API_KEY}`);
+
+            ws.onopen = () => {
+                statusBadge.innerText = "Live Server Connected";
+                statusBadge.className = "text-xs bg-emerald-900 text-emerald-400 px-3 py-1 rounded-full border border-emerald-700";
+                // Subscribe to XAU/USD
+                ws.send(JSON.stringify({ "action": "subscribe", "params": { "symbols": SYMBOL } }));
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                
+                if (msg.event === "price" && msg.price) {
+                    let price = parseFloat(msg.price);
+                    livePrice = price;
+                    
+                    // Update UI Price
+                    document.getElementById('live-price-display').innerText = price.toFixed(2);
+                    updateLivePnL();
+
+                    // Update Live Chart Candle
+                    if (currentCandle) {
+                        currentCandle.close = price;
+                        currentCandle.high = Math.max(currentCandle.high, price);
+                        currentCandle.low = Math.min(currentCandle.low, price);
+                        candleSeries.update(currentCandle);
+                    }
+                }
+            };
+
+            ws.onerror = () => {
+                statusBadge.innerText = "Connection Error";
+                statusBadge.className = "text-xs bg-red-900 text-red-400 px-3 py-1 rounded-full border border-red-700";
+            };
+        }
+
+        // ==========================================
+        // 3. B-BOOK EXECUTION & CHART LINES (EXNESS STYLE)
         // ==========================================
         let activeTrades = [];
         let tradeHistory = [];
+        let accountBalance = 10000.00;
 
-        function openTrade(type) {
-            let mockPrice = (2350.00 + (Math.random() * 10 - 5)).toFixed(2);
-            if (type === 'BUY') { mockPrice = (parseFloat(mockPrice) + 0.05).toFixed(2); }
+        function executeTrade(type) {
+            if (livePrice === 0) return alert("Waiting for live market data...");
+
+            // Apply fixed spread: 0.05 cents
+            let execPrice = type === 'BUY' ? livePrice + 0.05 : livePrice;
+            let tradeId = Date.now();
+
+            // DRAW EXNESS-STYLE LINE ON CHART
+            let entryLine = candleSeries.createPriceLine({
+                price: execPrice,
+                color: type === 'BUY' ? '#10b981' : '#ef4444',
+                lineWidth: 2,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: `${type} Entry`,
+            });
 
             const trade = {
-                id: Date.now(), // unique ID for closing
+                id: tradeId,
                 time: new Date().toLocaleString(),
                 symbol: "XAUUSD",
                 type: type,
-                entryPrice: mockPrice
+                entryPrice: execPrice,
+                chartLine: entryLine // Save reference to remove later
             };
 
             activeTrades.push(trade);
@@ -297,41 +358,74 @@
         }
 
         function closeTrade(id) {
-            // Find trade in active array
             const index = activeTrades.findIndex(t => t.id === id);
             if (index > -1) {
                 const trade = activeTrades[index];
                 
-                // Generate a mock close price slightly different from entry
-                trade.closePrice = (parseFloat(trade.entryPrice) + (Math.random() * 10 - 5)).toFixed(2);
+                // REMOVE LINE FROM CHART
+                candleSeries.removePriceLine(trade.chartLine);
+
+                // Calculate Final PnL
+                let finalPnL = trade.type === 'BUY' ? (livePrice - trade.entryPrice) : (trade.entryPrice - livePrice);
+                finalPnL = finalPnL * 10; // Demo lot multiplier
                 
-                // Move to history
+                trade.closePrice = livePrice;
+                trade.finalPnL = finalPnL;
+                accountBalance += finalPnL;
+                
                 tradeHistory.push(trade);
                 activeTrades.splice(index, 1);
                 
-                // Update UIs
                 renderActiveTrades();
                 renderJournalTable();
-                document.getElementById('total-trades-stat').innerText = tradeHistory.length;
+                updateLivePnL();
             }
+        }
+
+        function updateLivePnL() {
+            let totalFloatingPnL = 0;
+            let totalMargin = activeTrades.length * 50; 
+
+            activeTrades.forEach(t => {
+                let pnl = t.type === 'BUY' ? (livePrice - t.entryPrice) : (t.entryPrice - livePrice);
+                pnl = pnl * 10; // Demo lot multiplier
+                
+                totalFloatingPnL += pnl;
+
+                let pnlCell = document.getElementById(`pnl-${t.id}`);
+                if (pnlCell) {
+                    pnlCell.innerText = (pnl >= 0 ? "+$" : "-$") + Math.abs(pnl).toFixed(2);
+                    pnlCell.className = `pnl-cell p-4 font-mono font-bold ${pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+                }
+            });
+
+            let equity = accountBalance + totalFloatingPnL;
+            
+            document.getElementById('dash-balance').innerText = "$" + accountBalance.toFixed(2);
+            document.getElementById('term-balance').innerText = "$" + accountBalance.toFixed(2);
+            
+            document.getElementById('dash-equity').innerText = "$" + equity.toFixed(2);
+            document.getElementById('term-equity').innerText = "$" + equity.toFixed(2);
+            
+            document.getElementById('dash-margin').innerText = "$" + totalMargin.toFixed(2);
         }
 
         function renderActiveTrades() {
             const tbody = document.getElementById('active-trades-body');
             tbody.innerHTML = ""; 
-            
             if (activeTrades.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No active trades.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">No active trades.</td></tr>';
                 return;
             }
 
             activeTrades.forEach(t => {
                 let actionColor = t.type === 'BUY' ? 'text-emerald-400' : 'text-red-400';
                 tbody.innerHTML += `
-                    <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                    <tr class="border-b border-gray-800">
                         <td class="p-4 font-semibold text-white">${t.symbol}</td>
                         <td class="p-4 font-bold ${actionColor}">${t.type}</td>
-                        <td class="p-4 font-mono text-gray-300">$${t.entryPrice}</td>
+                        <td class="p-4 font-mono text-gray-300">${t.entryPrice.toFixed(2)}</td>
+                        <td id="pnl-${t.id}" class="pnl-cell p-4 font-mono font-bold text-gray-400">$0.00</td>
                         <td class="p-4 text-right">
                             <button onclick="closeTrade(${t.id})" class="bg-gray-700 hover:bg-red-500 text-white px-4 py-1 rounded text-sm transition-colors">Close</button>
                         </td>
@@ -343,67 +437,35 @@
         function renderJournalTable() {
             const tbody = document.getElementById('journal-body');
             tbody.innerHTML = ""; 
-            
-            if (tradeHistory.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">No closed trades yet.</td></tr>';
-                return;
-            }
+            if (tradeHistory.length === 0) return tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">No closed trades yet.</td></tr>';
 
-            const reversedHistory = [...tradeHistory].reverse();
-            reversedHistory.forEach(t => {
+            [...tradeHistory].reverse().forEach(t => {
                 let actionColor = t.type === 'BUY' ? 'text-emerald-400' : 'text-red-400';
+                let pnlColor = t.finalPnL >= 0 ? 'text-emerald-400' : 'text-red-400';
+                let pnlText = (t.finalPnL >= 0 ? "+$" : "-$") + Math.abs(t.finalPnL).toFixed(2);
+
                 tbody.innerHTML += `
-                    <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                    <tr class="border-b border-gray-800">
                         <td class="p-4 text-sm text-gray-400">${t.time}</td>
-                        <td class="p-4 font-semibold text-white">${t.symbol}</td>
                         <td class="p-4 font-bold ${actionColor}">${t.type}</td>
-                        <td class="p-4 font-mono text-gray-300">$${t.entryPrice}</td>
-                        <td class="p-4 font-mono text-white">$${t.closePrice}</td>
+                        <td class="p-4 font-mono text-gray-300">${t.entryPrice.toFixed(2)}</td>
+                        <td class="p-4 font-mono text-gray-300">${t.closePrice.toFixed(2)}</td>
+                        <td class="p-4 font-mono font-bold ${pnlColor}">${pnlText}</td>
                     </tr>
                 `;
             });
         }
 
         function exportToExcel() {
-            if (tradeHistory.length === 0) {
-                alert("No closed trades to export!");
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Time,Symbol,Action,Entry Price,Close Price\n"; 
-
-            tradeHistory.forEach(function(t) {
-                let row = `"${t.time}","${t.symbol}","${t.type}","${t.entryPrice}","${t.closePrice}"`;
-                csvContent += row + "\n";
-            });
-
-            const encodedUri = encodeURI(csvContent);
+            if (tradeHistory.length === 0) return alert("No closed trades to export!");
+            let csvContent = "data:text/csv;charset=utf-8,Time,Action,Entry Price,Close Price,Net PnL\n"; 
+            tradeHistory.forEach(t => csvContent += `"${t.time}","${t.type}","${t.entryPrice}","${t.closePrice}","${t.finalPnL}"\n`);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            link.setAttribute("href", encodeURI(csvContent));
             link.setAttribute("download", "Emerald_Trade_Journal.csv");
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        }
-
-        // ==========================================
-        // FUNDS LOGIC
-        // ==========================================
-        function showPaymentDetails() {
-            const method = document.getElementById('payment-method').value;
-            const form = document.getElementById('deposit-form');
-            const details = document.getElementById('payment-details');
-            if (!method) { form.classList.add('hidden-section'); return; }
-            form.classList.remove('hidden-section');
-            if (method === 'upi') details.innerHTML = "<span class='text-emerald-400'>UPI ID:</span> emeraldcapital@ybl<br>Scan from any app.";
-            else if (method === 'bank') details.innerHTML = "<span class='text-emerald-400'>Bank:</span> HDFC Bank<br><span class='text-emerald-400'>A/C:</span> 5010023456789";
-            else if (method === 'crypto') details.innerHTML = "<span class='text-emerald-400'>USDT (TRC20):</span><br>T9xD3...[Random]...Fq8P";
-        }
-        function submitPayment() {
-            const amt = document.getElementById('deposit-amount').value;
-            if(!amt || amt <= 0) return alert("Enter valid amount.");
-            alert(`Payment of $${amt} submitted.`);
         }
     </script>
 </body>
