@@ -3,130 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emerald Capital - Trading Terminal</title>
+    <title>Emerald Capital | Trading Terminal</title>
+    <!-- Tailwind CSS for Premium UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase Compat SDKs (Easier for single HTML file) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669' },
+                        dark: { 900: '#0B0E14', 800: '#151924', 700: '#1F2937' }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #121212; color: white; margin: 0; padding: 20px; }
-        .section { background-color: #1e1e1e; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
-        .hidden { display: none; }
-        button { background-color: #00c853; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
-        button:hover { background-color: #009624; }
-        input, select { padding: 10px; margin-top: 10px; border-radius: 5px; border: none; width: 90%; max-width: 300px; }
-        .alert-text { color: #ff5252; font-size: 0.9em; font-weight: bold; }
+        body { background-color: #0B0E14; color: #E2E8F0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass-panel { background: rgba(21, 25, 36, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .hidden-section { display: none; }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0B0E14; }
+        ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 4px; }
     </style>
 </head>
-<body>
+<body class="h-screen flex overflow-hidden">
 
-    <!-- 1. GOOGLE LOGIN SECTION -->
-    <div id="login-section" class="section">
-        <h2>Welcome to Emerald Capital</h2>
-        <p>Login to access your trading terminal.</p>
-        <!-- Firebase Auth will attach to this button -->
-        <button id="google-login-btn" onclick="simulateLogin()">Login with Google</button>
+    <!-- ================= 1. LOGIN PAGE (Premium) ================= -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-dark-900">
+        <div class="glass-panel p-10 rounded-2xl shadow-2xl text-center w-full max-w-md border border-gray-800">
+            <div class="mb-8">
+                <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500 mb-2">Emerald Capital</h1>
+                <p class="text-gray-400">Institutional Grade Trading Terminal</p>
+            </div>
+            
+            <button onclick="loginWithGoogle()" class="w-full bg-white text-gray-900 font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-100 transition-all duration-300 shadow-lg">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google">
+                Sign in with Google
+            </button>
+            <p id="login-error" class="text-red-500 text-sm mt-4 hidden"></p>
+        </div>
     </div>
 
-    <!-- MAIN APP (Hidden until logged in) -->
-    <div id="main-app" class="hidden">
+    <!-- ================= 2. MAIN APP (Hidden until logged in) ================= -->
+    <div id="main-app" class="hidden-section flex w-full h-full">
         
-        <!-- 2. DASHBOARD SECTION -->
-        <div class="section" id="dashboard">
-            <h2>Dashboard</h2>
-            <p><strong>Trader:</strong> <span id="user-name">Loading...</span></p>
-            <p><strong>Balance:</strong> $0.00 | <strong>Equity:</strong> $0.00 | <strong>Margin:</strong> $0.00</p>
-            <p><em>Overall PnL:</em> <span style="color: gray;">0.00</span></p>
-        </div>
-
-        <!-- 3. TRADING TERMINAL SECTION -->
-        <div class="section" id="terminal">
-            <h2>Emerald Terminal</h2>
-            <p style="color: gray; font-size: 0.8em;">Note: Platform spread is fixed at 0.05 cents.</p>
-            <!-- Here we will later inject TradingView Lightweight Charts -->
-            <div style="height: 300px; background-color: #000; border: 1px solid #333; display: flex; align-items: center; justify-content: center;">
-                [ Live Chart Data Area ]
+        <!-- SIDEBAR NAVIGATION -->
+        <div class="w-64 glass-panel border-r border-gray-800 flex flex-col justify-between">
+            <div>
+                <div class="p-6 border-b border-gray-800">
+                    <h2 class="text-2xl font-bold text-emerald-500">Emerald</h2>
+                </div>
+                <nav class="p-4 space-y-2">
+                    <button onclick="switchTab('dashboard')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-chart-pie w-5"></i> Dashboard
+                    </button>
+                    <button onclick="switchTab('terminal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-chart-line w-5"></i> Terminal
+                    </button>
+                    <button onclick="switchTab('funds')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-wallet w-5"></i> Funds
+                    </button>
+                    <button onclick="switchTab('journal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-book w-5"></i> Trade Journal
+                    </button>
+                    <button class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-robot w-5"></i> AI Suggester
+                    </button>
+                </nav>
             </div>
-            <div style="margin-top: 15px;">
-                <button style="background-color: #ff5252;">Sell (Bid)</button>
-                <button style="background-color: #00c853;">Buy (Ask + 0.05)</button>
-            </div>
-        </div>
-
-        <!-- 4. FUNDS SECTION -->
-        <div class="section" id="funds">
-            <h2>Funds Management</h2>
-            
-            <div style="display: flex; gap: 20px;">
-                <!-- DEPOSIT AREA -->
-                <div style="flex: 1; border-right: 1px solid #333; padding-right: 20px;">
-                    <h3>Deposit</h3>
-                    <select id="payment-method" onchange="showPaymentDetails()">
-                        <option value="">Select Method...</option>
-                        <option value="upi">UPI</option>
-                        <option value="bank">Bank Transfer</option>
-                        <option value="crypto">Crypto (USDT)</option>
-                    </select>
-
-                    <div id="amount-section" class="hidden">
-                        <input type="number" id="deposit-amount" placeholder="Enter Amount ($)">
-                        
-                        <div id="payment-details" style="margin-top: 15px; padding: 10px; background-color: #2c2c2c; border-radius: 5px;">
-                            <!-- Payment details injected here via JS -->
-                        </div>
-                        
-                        <button onclick="submitPayment()" style="margin-top: 15px; width: 100%;">I Have Paid</button>
+            <div class="p-4 border-t border-gray-800">
+                <div class="flex items-center gap-3 mb-4">
+                    <img id="user-avatar" src="" class="w-10 h-10 rounded-full bg-gray-700" alt="Avatar">
+                    <div>
+                        <p id="user-name" class="text-sm font-semibold">Trader</p>
+                        <p class="text-xs text-gray-500">Verified</p>
                     </div>
                 </div>
-
-                <!-- WITHDRAWAL AREA -->
-                <div style="flex: 1; padding-left: 20px;">
-                    <h3>Withdraw</h3>
-                    <p class="alert-text">⚠️ Withdrawal Policy: You can only withdraw a maximum of 10% of your total balance per month.</p>
-                    <input type="number" placeholder="Withdraw Amount ($)">
-                    <button style="margin-top: 15px; background-color: #2196f3;">Request Withdrawal</button>
-                </div>
+                <button onclick="logout()" class="w-full text-sm text-red-400 hover:text-red-300 text-left"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
         </div>
 
+        <!-- MAIN CONTENT AREA -->
+        <div class="flex-1 overflow-y-auto p-8 bg-dark-900">
+            
+            <!-- DASHBOARD TAB -->
+            <div id="tab-dashboard" class="tab-content">
+                <h2 class="text-3xl font-bold mb-6">Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="glass-panel p-6 rounded-xl border border-gray-800">
+                        <p class="text-gray-400 text-sm">Account Balance</p>
+                        <h3 class="text-3xl font-bold text-white mt-2">$0.00</h3>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl border border-gray-800">
+                        <p class="text-gray-400 text-sm">Equity</p>
+                        <h3 class="text-3xl font-bold text-emerald-400 mt-2">$0.00</h3>
+                    </div>
+                    <div class="glass-panel p-6 rounded-xl border border-gray-800">
+                        <p class="text-gray-400 text-sm">Margin Level</p>
+                        <h3 class="text-3xl font-bold text-white mt-2">0.00%</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TERMINAL TAB -->
+            <div id="tab-terminal" class="tab-content hidden-section">
+                <div class="flex justify-between items-end mb-4">
+                    <h2 class="text-3xl font-bold">XAUUSD Terminal</h2>
+                    <span class="text-xs bg-dark-800 px-3 py-1 rounded-full text-gray-400 border border-gray-700">Spread: 0.05 Cents</span>
+                </div>
+                
+                <div class="w-full h-96 bg-dark-800 rounded-xl border border-gray-700 flex items-center justify-center mb-6 shadow-inner">
+                    <p class="text-gray-500 font-mono">[ TradingView Advanced Chart Integration Area ]</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 max-w-md">
+                    <button class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-red-500/20 transition-all">SELL (Bid)</button>
+                    <button class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-emerald-500/20 transition-all">BUY (Ask)</button>
+                </div>
+            </div>
+
+            <!-- FUNDS TAB -->
+            <div id="tab-funds" class="tab-content hidden-section">
+                <h2 class="text-3xl font-bold mb-6">Funds Management</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    <!-- DEPOSIT -->
+                    <div class="glass-panel p-8 rounded-xl border border-gray-800 relative">
+                        <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Deposit Funds</h3>
+                        
+                        <label class="block text-sm text-gray-400 mb-2">Select Method</label>
+                        <select id="payment-method" onchange="showPaymentDetails()" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-6 focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="">Choose...</option>
+                            <option value="upi">UPI</option>
+                            <option value="bank">Bank Transfer</option>
+                            <option value="crypto">Crypto (USDT TRC20)</option>
+                        </select>
+
+                        <div id="deposit-form" class="hidden-section">
+                            <label class="block text-sm text-gray-400 mb-2">Amount ($)</label>
+                            <input type="number" id="deposit-amount" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0.00">
+                            
+                            <div id="payment-details" class="bg-dark-900 border border-gray-700 p-4 rounded-lg mb-6 text-sm text-gray-300 font-mono">
+                                <!-- Details injected here -->
+                            </div>
+
+                            <button onclick="submitPayment()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg transition-all">I Have Paid</button>
+                        </div>
+                    </div>
+
+                    <!-- WITHDRAW -->
+                    <div class="glass-panel p-8 rounded-xl border border-gray-800">
+                        <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Withdraw Funds</h3>
+                        
+                        <div class="bg-blue-900/20 border border-blue-500/30 text-blue-400 p-4 rounded-lg mb-6 text-sm flex items-start gap-3">
+                            <i class="fas fa-info-circle mt-1"></i>
+                            <p><strong>Withdrawal Policy:</strong> To maintain liquidity, a maximum of 10% of your total balance can be withdrawn per month.</p>
+                        </div>
+
+                        <label class="block text-sm text-gray-400 mb-2">Amount to Withdraw ($)</label>
+                        <input type="number" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-6 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00">
+                        
+                        <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg transition-all">Request Withdrawal</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JOURNAL TAB (Placeholder for now) -->
+            <div id="tab-journal" class="tab-content hidden-section">
+                <h2 class="text-3xl font-bold mb-6">Trade Journal</h2>
+                <div class="glass-panel p-6 rounded-xl border border-gray-800">
+                    <p class="text-gray-400">Your logged trades, market structure shifts, and screenshots will appear here.</p>
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // Simulate Google Login for now
-        function simulateLogin() {
-            document.getElementById('login-section').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('user-name').innerText = "Trader_001 (Google Verified)";
+        // ==========================================
+        // FIREBASE CONFIGURATION (UPDATE THIS!)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        // Check Auth State Automatically
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is logged in
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden-section');
+                
+                // Update UI with user info
+                document.getElementById('user-name').innerText = user.displayName;
+                document.getElementById('user-avatar').src = user.photoURL;
+                
+                // Switch to default tab
+                switchTab('dashboard');
+            } else {
+                // User is logged out
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('main-app').classList.add('hidden-section');
+            }
+        });
+
+        // Google Login Function
+        function loginWithGoogle() {
+            auth.signInWithPopup(provider).catch((error) => {
+                const errorMsg = document.getElementById('login-error');
+                errorMsg.innerText = "Login failed. Check console for details.";
+                errorMsg.classList.remove('hidden');
+                console.error("Auth Error:", error);
+                
+                // TEMPORARY BYPASS for testing UI without real Firebase config:
+                // Remove these 3 lines below once you add real Firebase keys!
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden-section');
+                switchTab('dashboard');
+            });
         }
 
-        // Show payment details based on selection
+        function logout() {
+            auth.signOut();
+        }
+
+        // ==========================================
+        // UI LOGIC
+        // ==========================================
+        
+        function switchTab(tabId) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.add('hidden-section'));
+            // Show selected tab
+            document.getElementById('tab-' + tabId).classList.remove('hidden-section');
+        }
+
         function showPaymentDetails() {
             const method = document.getElementById('payment-method').value;
-            const amountSection = document.getElementById('amount-section');
-            const detailsBox = document.getElementById('payment-details');
+            const form = document.getElementById('deposit-form');
+            const details = document.getElementById('payment-details');
             
-            if (method === "") {
-                amountSection.classList.add('hidden');
+            if (!method) {
+                form.classList.add('hidden-section');
                 return;
             }
             
-            amountSection.classList.remove('hidden');
+            form.classList.remove('hidden-section');
             
             if (method === 'upi') {
-                detailsBox.innerHTML = "<strong>UPI ID:</strong> random123@ybl<br><small>Send exact amount and click 'I Have Paid'.</small>";
+                details.innerHTML = "<span class='text-emerald-400'>UPI ID:</span> emeraldcapital@ybl<br>Scan from any app (GPay, PhonePe).";
             } else if (method === 'bank') {
-                detailsBox.innerHTML = "<strong>Bank Name:</strong> Global Demo Bank<br><strong>A/C:</strong> 000123456789<br><strong>IFSC:</strong> DEMO0001234";
+                details.innerHTML = "<span class='text-emerald-400'>Bank:</span> HDFC Bank<br><span class='text-emerald-400'>A/C:</span> 5010023456789<br><span class='text-emerald-400'>IFSC:</span> HDFC0001234";
             } else if (method === 'crypto') {
-                detailsBox.innerHTML = "<strong>USDT (TRC20) Address:</strong><br>T9randomCryptoAddressPlaceholder456";
+                details.innerHTML = "<span class='text-emerald-400'>USDT (TRC20):</span><br>T9xD3...[Random Address]...Fq8P<br><span class='text-red-400 text-xs'>Send only USDT on TRON network.</span>";
             }
         }
 
-        // Handle Payment Submission (This will trigger the email later)
         function submitPayment() {
             const amount = document.getElementById('deposit-amount').value;
             if(!amount || amount <= 0) {
                 alert("Please enter a valid amount.");
                 return;
             }
-            // In a real app, this sends a POST request to your Python backend to send the email
-            alert("Payment request for $" + amount + " submitted! An email alert has been sent to admin.");
+            alert(`Payment of $${amount} submitted for verification. Admin notified.`);
         }
     </script>
 </body>
