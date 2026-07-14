@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emerald Capital | Trading Terminal</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS for Premium UI -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Firebase Compat SDKs -->
+    <!-- Firebase Compat SDKs (Easier for single HTML file) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
@@ -27,7 +27,8 @@
     <style>
         body { background-color: #0B0E14; color: #E2E8F0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .glass-panel { background: rgba(21, 25, 36, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .hidden-section { display: none !important; }
+        .hidden-section { display: none; }
+        /* Scrollbar styling */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0B0E14; }
         ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 4px; }
@@ -35,7 +36,7 @@
 </head>
 <body class="h-screen flex overflow-hidden">
 
-    <!-- ================= 1. LOGIN PAGE ================= -->
+    <!-- ================= 1. LOGIN PAGE (Premium) ================= -->
     <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-dark-900">
         <div class="glass-panel p-10 rounded-2xl shadow-2xl text-center w-full max-w-md border border-gray-800">
             <div class="mb-8">
@@ -47,14 +48,14 @@
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6" alt="Google">
                 Sign in with Google
             </button>
-            <p id="login-error" class="text-red-500 text-sm mt-4 hidden-section"></p>
+            <p id="login-error" class="text-red-500 text-sm mt-4 hidden"></p>
         </div>
     </div>
 
-    <!-- ================= 2. MAIN APP ================= -->
+    <!-- ================= 2. MAIN APP (Hidden until logged in) ================= -->
     <div id="main-app" class="hidden-section flex w-full h-full">
         
-        <!-- SIDEBAR -->
+        <!-- SIDEBAR NAVIGATION -->
         <div class="w-64 glass-panel border-r border-gray-800 flex flex-col justify-between">
             <div>
                 <div class="p-6 border-b border-gray-800">
@@ -70,17 +71,23 @@
                     <button onclick="switchTab('funds')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
                         <i class="fas fa-wallet w-5"></i> Funds
                     </button>
+                    <button onclick="switchTab('journal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-book w-5"></i> Trade Journal
+                    </button>
+                    <button class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-robot w-5"></i> AI Suggester
+                    </button>
                 </nav>
             </div>
             <div class="p-4 border-t border-gray-800">
                 <div class="flex items-center gap-3 mb-4">
                     <img id="user-avatar" src="" class="w-10 h-10 rounded-full bg-gray-700" alt="Avatar">
                     <div>
-                        <p id="user-name" class="text-sm font-semibold truncate w-32">Trader</p>
-                        <p class="text-xs text-emerald-400">Verified Client</p>
+                        <p id="user-name" class="text-sm font-semibold">Trader</p>
+                        <p class="text-xs text-gray-500">Verified</p>
                     </div>
                 </div>
-                <button onclick="logout()" class="w-full text-sm text-red-400 hover:text-red-300 text-left p-2 rounded hover:bg-gray-800"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                <button onclick="logout()" class="w-full text-sm text-red-400 hover:text-red-300 text-left"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
         </div>
 
@@ -114,7 +121,7 @@
                 </div>
                 
                 <div class="w-full h-96 bg-dark-800 rounded-xl border border-gray-700 flex items-center justify-center mb-6 shadow-inner">
-                    <p class="text-gray-500 font-mono">[ TradingView Chart Integration Area ]</p>
+                    <p class="text-gray-500 font-mono">[ TradingView Advanced Chart Integration Area ]</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 max-w-md">
@@ -168,22 +175,30 @@
                     </div>
                 </div>
             </div>
+
+            <!-- JOURNAL TAB (Placeholder for now) -->
+            <div id="tab-journal" class="tab-content hidden-section">
+                <h2 class="text-3xl font-bold mb-6">Trade Journal</h2>
+                <div class="glass-panel p-6 rounded-xl border border-gray-800">
+                    <p class="text-gray-400">Your logged trades, market structure shifts, and screenshots will appear here.</p>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
         // ==========================================
-        // FIREBASE KEYS INJECTED HERE
+        // FIREBASE CONFIGURATION (UPDATE THIS!)
         // ==========================================
         const firebaseConfig = {
-            apiKey: "AIzaSyA5L7rCBjooJNdnpO1BqiUhauUAynBlvp8",
-            authDomain: "emareld-capital.firebaseapp.com",
-            projectId: "emareld-capital",
-            storageBucket: "emareld-capital.firebasestorage.app",
-            messagingSenderId: "749956592504",
-            appId: "1:749956592504:web:af04a072a3b74553c9ce8d",
-            measurementId: "G-HL8BDPYCNX"
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
         
         // Initialize Firebase
@@ -194,43 +209,52 @@
         // Check Auth State Automatically
         auth.onAuthStateChanged((user) => {
             if (user) {
-                document.getElementById('login-screen').classList.add('hidden-section');
+                // User is logged in
+                document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').classList.remove('hidden-section');
                 
-                // Update profile info
+                // Update UI with user info
                 document.getElementById('user-name').innerText = user.displayName;
                 document.getElementById('user-avatar').src = user.photoURL;
                 
+                // Switch to default tab
                 switchTab('dashboard');
             } else {
-                document.getElementById('login-screen').classList.remove('hidden-section');
+                // User is logged out
+                document.getElementById('login-screen').style.display = 'flex';
                 document.getElementById('main-app').classList.add('hidden-section');
             }
         });
 
         // Google Login Function
         function loginWithGoogle() {
-            auth.signInWithPopup(provider).then((result) => {
-                document.getElementById('login-error').classList.add('hidden-section');
-            }).catch((error) => {
+            auth.signInWithPopup(provider).catch((error) => {
                 const errorMsg = document.getElementById('login-error');
-                errorMsg.innerText = "Error: " + error.message;
-                errorMsg.classList.remove('hidden-section');
+                errorMsg.innerText = "Login failed. Check console for details.";
+                errorMsg.classList.remove('hidden');
                 console.error("Auth Error:", error);
+                
+                // TEMPORARY BYPASS for testing UI without real Firebase config:
+                // Remove these 3 lines below once you add real Firebase keys!
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden-section');
+                switchTab('dashboard');
             });
         }
 
-        // Logout Function
         function logout() {
             auth.signOut();
         }
 
         // ==========================================
-        // UI FUNCTIONS
+        // UI LOGIC
         // ==========================================
+        
         function switchTab(tabId) {
+            // Hide all tabs
             const tabs = document.querySelectorAll('.tab-content');
             tabs.forEach(tab => tab.classList.add('hidden-section'));
+            // Show selected tab
             document.getElementById('tab-' + tabId).classList.remove('hidden-section');
         }
 
@@ -243,6 +267,7 @@
                 form.classList.add('hidden-section');
                 return;
             }
+            
             form.classList.remove('hidden-section');
             
             if (method === 'upi') {
