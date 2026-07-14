@@ -31,6 +31,8 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0B0E14; }
         ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 4px; }
+        /* TradingView widget container fixes */
+        #tv-container { height: 500px; width: 100%; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -67,6 +69,9 @@
                     <button onclick="switchTab('terminal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
                         <i class="fas fa-chart-line w-5"></i> Terminal
                     </button>
+                    <button onclick="switchTab('journal')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-book w-5"></i> Trade Journal
+                    </button>
                     <button onclick="switchTab('funds')" class="w-full flex items-center gap-3 text-left p-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
                         <i class="fas fa-wallet w-5"></i> Funds
                     </button>
@@ -100,8 +105,8 @@
                         <h3 class="text-3xl font-bold text-emerald-400 mt-2">$0.00</h3>
                     </div>
                     <div class="glass-panel p-6 rounded-xl border border-gray-800">
-                        <p class="text-gray-400 text-sm">Margin Level</p>
-                        <h3 class="text-3xl font-bold text-white mt-2">0.00%</h3>
+                        <p class="text-gray-400 text-sm">Total Trades Taken</p>
+                        <h3 id="total-trades-stat" class="text-3xl font-bold text-white mt-2">0</h3>
                     </div>
                 </div>
             </div>
@@ -110,16 +115,71 @@
             <div id="tab-terminal" class="tab-content hidden-section">
                 <div class="flex justify-between items-end mb-4">
                     <h2 class="text-3xl font-bold">XAUUSD Terminal</h2>
-                    <span class="text-xs bg-dark-800 px-3 py-1 rounded-full text-gray-400 border border-gray-700">Spread: 0.05 Cents</span>
+                    <span class="text-xs bg-dark-800 px-3 py-1 rounded-full text-gray-400 border border-gray-700">Fixed Spread: 0.05</span>
                 </div>
                 
-                <div class="w-full h-96 bg-dark-800 rounded-xl border border-gray-700 flex items-center justify-center mb-6 shadow-inner">
-                    <p class="text-gray-500 font-mono">[ TradingView Chart Integration Area ]</p>
+                <!-- TRADINGVIEW WIDGET -->
+                <div class="w-full bg-dark-800 rounded-xl border border-gray-700 mb-6 overflow-hidden shadow-inner" id="tv-container">
+                    <!-- TradingView Widget BEGIN -->
+                    <div class="tradingview-widget-container" style="height:100%;width:100%">
+                        <div id="tradingview_xauusd" style="height:calc(100% - 32px);width:100%"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+                        <script type="text/javascript">
+                        new TradingView.widget(
+                        {
+                            "autosize": true,
+                            "symbol": "OANDA:XAUUSD",
+                            "interval": "15",
+                            "timezone": "Asia/Kolkata",
+                            "theme": "dark",
+                            "style": "1",
+                            "locale": "en",
+                            "enable_publishing": false,
+                            "backgroundColor": "#151924",
+                            "gridColor": "#1F2937",
+                            "hide_top_toolbar": false,
+                            "hide_legend": false,
+                            "save_image": false,
+                            "container_id": "tradingview_xauusd"
+                        }
+                        );
+                        </script>
+                    </div>
+                    <!-- TradingView Widget END -->
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 max-w-md">
-                    <button class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-red-500/20 transition-all">SELL (Bid)</button>
-                    <button class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-emerald-500/20 transition-all">BUY (Ask)</button>
+                    <button onclick="executeTrade('SELL')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-red-500/20 transition-all">SELL (Bid)</button>
+                    <button onclick="executeTrade('BUY')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-emerald-500/20 transition-all">BUY (Ask)</button>
+                </div>
+            </div>
+
+            <!-- JOURNAL TAB -->
+            <div id="tab-journal" class="tab-content hidden-section">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold">Trade Journal</h2>
+                    <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-all">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </button>
+                </div>
+                
+                <div class="glass-panel rounded-xl border border-gray-800 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-dark-800 border-b border-gray-700">
+                                <th class="p-4 font-semibold text-gray-300">Time (IST)</th>
+                                <th class="p-4 font-semibold text-gray-300">Symbol</th>
+                                <th class="p-4 font-semibold text-gray-300">Action</th>
+                                <th class="p-4 font-semibold text-gray-300">Entry Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="journal-body">
+                            <!-- Trades will appear here -->
+                            <tr>
+                                <td colspan="4" class="p-4 text-center text-gray-500">No trades taken yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -131,7 +191,6 @@
                     <!-- DEPOSIT -->
                     <div class="glass-panel p-8 rounded-xl border border-gray-800 relative">
                         <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Deposit Funds</h3>
-                        
                         <label class="block text-sm text-gray-400 mb-2">Select Method</label>
                         <select id="payment-method" onchange="showPaymentDetails()" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-6 focus:ring-2 focus:ring-emerald-500 outline-none">
                             <option value="">Choose...</option>
@@ -139,15 +198,10 @@
                             <option value="bank">Bank Transfer</option>
                             <option value="crypto">Crypto (USDT TRC20)</option>
                         </select>
-
                         <div id="deposit-form" class="hidden-section">
                             <label class="block text-sm text-gray-400 mb-2">Amount ($)</label>
                             <input type="number" id="deposit-amount" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-4 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0.00">
-                            
-                            <div id="payment-details" class="bg-dark-900 border border-gray-700 p-4 rounded-lg mb-6 text-sm text-gray-300 font-mono">
-                                <!-- Details injected here -->
-                            </div>
-
+                            <div id="payment-details" class="bg-dark-900 border border-gray-700 p-4 rounded-lg mb-6 text-sm text-gray-300 font-mono"></div>
                             <button onclick="submitPayment()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg transition-all">I Have Paid</button>
                         </div>
                     </div>
@@ -155,15 +209,12 @@
                     <!-- WITHDRAW -->
                     <div class="glass-panel p-8 rounded-xl border border-gray-800">
                         <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Withdraw Funds</h3>
-                        
                         <div class="bg-blue-900/20 border border-blue-500/30 text-blue-400 p-4 rounded-lg mb-6 text-sm flex items-start gap-3">
                             <i class="fas fa-info-circle mt-1"></i>
                             <p><strong>Withdrawal Policy:</strong> To maintain liquidity, a maximum of 10% of your total balance can be withdrawn per month.</p>
                         </div>
-
                         <label class="block text-sm text-gray-400 mb-2">Amount to Withdraw ($)</label>
                         <input type="number" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-6 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00">
-                        
                         <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg transition-all">Request Withdrawal</button>
                     </div>
                 </div>
@@ -173,9 +224,7 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // ==========================================
-        // FIREBASE KEYS INJECTED HERE
-        // ==========================================
+        // FIREBASE KEYS
         const firebaseConfig = {
             apiKey: "AIzaSyA5L7rCBjooJNdnpO1BqiUhauUAynBlvp8",
             authDomain: "emareld-capital.firebaseapp.com",
@@ -186,63 +235,120 @@
             measurementId: "G-HL8BDPYCNX"
         };
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const provider = new firebase.auth.GoogleAuthProvider();
 
-        // Check Auth State Automatically
         auth.onAuthStateChanged((user) => {
             if (user) {
                 document.getElementById('login-screen').classList.add('hidden-section');
                 document.getElementById('main-app').classList.remove('hidden-section');
-                
-                // Update profile info
                 document.getElementById('user-name').innerText = user.displayName;
                 document.getElementById('user-avatar').src = user.photoURL;
-                
-                switchTab('dashboard');
+                switchTab('terminal'); // Default tab set to Terminal now
             } else {
                 document.getElementById('login-screen').classList.remove('hidden-section');
                 document.getElementById('main-app').classList.add('hidden-section');
             }
         });
 
-        // Google Login Function
         function loginWithGoogle() {
-            auth.signInWithPopup(provider).then((result) => {
-                document.getElementById('login-error').classList.add('hidden-section');
-            }).catch((error) => {
+            auth.signInWithPopup(provider).catch((error) => {
                 const errorMsg = document.getElementById('login-error');
                 errorMsg.innerText = "Error: " + error.message;
                 errorMsg.classList.remove('hidden-section');
-                console.error("Auth Error:", error);
             });
         }
 
-        // Logout Function
-        function logout() {
-            auth.signOut();
-        }
+        function logout() { auth.signOut(); }
 
-        // ==========================================
-        // UI FUNCTIONS
-        // ==========================================
         function switchTab(tabId) {
             const tabs = document.querySelectorAll('.tab-content');
             tabs.forEach(tab => tab.classList.add('hidden-section'));
             document.getElementById('tab-' + tabId).classList.remove('hidden-section');
         }
 
+        // ==========================================
+        // TRADE EXECUTION & JOURNAL LOGIC
+        // ==========================================
+        let trades = [];
+
+        function executeTrade(type) {
+            // Frontend demo doesn't have live API price fetching inherently, so we generate a mock fill price around 2350 for demonstration
+            let mockPrice = (2350.00 + (Math.random() * 10 - 5)).toFixed(2);
+            
+            // Add spread logic
+            if (type === 'BUY') { mockPrice = (parseFloat(mockPrice) + 0.05).toFixed(2); }
+
+            const trade = {
+                time: new Date().toLocaleString(),
+                symbol: "XAUUSD",
+                type: type,
+                price: mockPrice
+            };
+
+            trades.push(trade);
+            updateJournalTable();
+            document.getElementById('total-trades-stat').innerText = trades.length;
+            
+            // Show alert and visually switch to Journal to show it worked
+            alert(`${type} order executed for XAUUSD at $${mockPrice}`);
+            switchTab('journal');
+        }
+
+        function updateJournalTable() {
+            const tbody = document.getElementById('journal-body');
+            tbody.innerHTML = ""; // Clear table
+            
+            // Reverse so newest trades are at the top
+            const reversedTrades = [...trades].reverse();
+
+            reversedTrades.forEach(t => {
+                let actionColor = t.type === 'BUY' ? 'text-emerald-400' : 'text-red-400';
+                tbody.innerHTML += `
+                    <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                        <td class="p-4 text-sm text-gray-400">${t.time}</td>
+                        <td class="p-4 font-semibold text-white">${t.symbol}</td>
+                        <td class="p-4 font-bold ${actionColor}">${t.type}</td>
+                        <td class="p-4 font-mono text-gray-300">$${t.price}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function exportToExcel() {
+            if (trades.length === 0) {
+                alert("No trades to export!");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Time,Symbol,Action,Entry Price\n"; // Header row
+
+            trades.forEach(function(t) {
+                let row = `"${t.time}","${t.symbol}","${t.type}","${t.price}"`;
+                csvContent += row + "\n";
+            });
+
+            // Trigger file download
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Emerald_Trade_Journal.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // ==========================================
+        // FUNDS LOGIC
+        // ==========================================
         function showPaymentDetails() {
             const method = document.getElementById('payment-method').value;
             const form = document.getElementById('deposit-form');
             const details = document.getElementById('payment-details');
             
-            if (!method) {
-                form.classList.add('hidden-section');
-                return;
-            }
+            if (!method) { form.classList.add('hidden-section'); return; }
             form.classList.remove('hidden-section');
             
             if (method === 'upi') {
@@ -256,10 +362,7 @@
 
         function submitPayment() {
             const amount = document.getElementById('deposit-amount').value;
-            if(!amount || amount <= 0) {
-                alert("Please enter a valid amount.");
-                return;
-            }
+            if(!amount || amount <= 0) { alert("Please enter a valid amount."); return; }
             alert(`Payment of $${amount} submitted for verification. Admin notified.`);
         }
     </script>
