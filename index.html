@@ -31,7 +31,6 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0B0E14; }
         ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 4px; }
-        /* TradingView widget container fixes */
         #tv-container { height: 500px; width: 100%; }
     </style>
 </head>
@@ -105,7 +104,7 @@
                         <h3 class="text-3xl font-bold text-emerald-400 mt-2">$0.00</h3>
                     </div>
                     <div class="glass-panel p-6 rounded-xl border border-gray-800">
-                        <p class="text-gray-400 text-sm">Total Trades Taken</p>
+                        <p class="text-gray-400 text-sm">Closed Trades</p>
                         <h3 id="total-trades-stat" class="text-3xl font-bold text-white mt-2">0</h3>
                     </div>
                 </div>
@@ -120,7 +119,6 @@
                 
                 <!-- TRADINGVIEW WIDGET -->
                 <div class="w-full bg-dark-800 rounded-xl border border-gray-700 mb-6 overflow-hidden shadow-inner" id="tv-container">
-                    <!-- TradingView Widget BEGIN -->
                     <div class="tradingview-widget-container" style="height:100%;width:100%">
                         <div id="tradingview_xauusd" style="height:calc(100% - 32px);width:100%"></div>
                         <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
@@ -138,26 +136,45 @@
                             "backgroundColor": "#151924",
                             "gridColor": "#1F2937",
                             "hide_top_toolbar": false,
-                            "hide_legend": false,
+                            "hide_side_toolbar": false, // ENABLED DRAWING TOOLS (Left Sidebar)
                             "save_image": false,
                             "container_id": "tradingview_xauusd"
                         }
                         );
                         </script>
                     </div>
-                    <!-- TradingView Widget END -->
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 max-w-md">
-                    <button onclick="executeTrade('SELL')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-red-500/20 transition-all">SELL (Bid)</button>
-                    <button onclick="executeTrade('BUY')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-emerald-500/20 transition-all">BUY (Ask)</button>
+                <div class="grid grid-cols-2 gap-4 max-w-md mb-8">
+                    <button onclick="openTrade('SELL')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-red-500/20 transition-all">SELL (Bid)</button>
+                    <button onclick="openTrade('BUY')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-emerald-500/20 transition-all">BUY (Ask)</button>
+                </div>
+
+                <!-- ACTIVE TRADES TABLE -->
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Active Positions</h3>
+                    <div class="glass-panel rounded-xl border border-gray-800 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-dark-800 border-b border-gray-700">
+                                    <th class="p-4 font-semibold text-gray-300">Symbol</th>
+                                    <th class="p-4 font-semibold text-gray-300">Action</th>
+                                    <th class="p-4 font-semibold text-gray-300">Entry Price</th>
+                                    <th class="p-4 font-semibold text-gray-300 text-right">Close</th>
+                                </tr>
+                            </thead>
+                            <tbody id="active-trades-body">
+                                <tr><td colspan="4" class="p-4 text-center text-gray-500">No active trades.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- JOURNAL TAB -->
             <div id="tab-journal" class="tab-content hidden-section">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold">Trade Journal</h2>
+                    <h2 class="text-3xl font-bold">Trade Journal History</h2>
                     <button onclick="exportToExcel()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-all">
                         <i class="fas fa-file-excel"></i> Export to Excel
                     </button>
@@ -171,13 +188,11 @@
                                 <th class="p-4 font-semibold text-gray-300">Symbol</th>
                                 <th class="p-4 font-semibold text-gray-300">Action</th>
                                 <th class="p-4 font-semibold text-gray-300">Entry Price</th>
+                                <th class="p-4 font-semibold text-gray-300">Close Price</th>
                             </tr>
                         </thead>
                         <tbody id="journal-body">
-                            <!-- Trades will appear here -->
-                            <tr>
-                                <td colspan="4" class="p-4 text-center text-gray-500">No trades taken yet.</td>
-                            </tr>
+                            <tr><td colspan="5" class="p-4 text-center text-gray-500">No closed trades yet.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -185,9 +200,9 @@
 
             <!-- FUNDS TAB -->
             <div id="tab-funds" class="tab-content hidden-section">
+                <!-- Keep existing funds structure -->
                 <h2 class="text-3xl font-bold mb-6">Funds Management</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    
                     <!-- DEPOSIT -->
                     <div class="glass-panel p-8 rounded-xl border border-gray-800 relative">
                         <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Deposit Funds</h3>
@@ -205,13 +220,12 @@
                             <button onclick="submitPayment()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg shadow-lg transition-all">I Have Paid</button>
                         </div>
                     </div>
-
                     <!-- WITHDRAW -->
                     <div class="glass-panel p-8 rounded-xl border border-gray-800">
                         <h3 class="text-xl font-semibold mb-6 border-b border-gray-700 pb-2">Withdraw Funds</h3>
                         <div class="bg-blue-900/20 border border-blue-500/30 text-blue-400 p-4 rounded-lg mb-6 text-sm flex items-start gap-3">
                             <i class="fas fa-info-circle mt-1"></i>
-                            <p><strong>Withdrawal Policy:</strong> To maintain liquidity, a maximum of 10% of your total balance can be withdrawn per month.</p>
+                            <p><strong>Withdrawal Policy:</strong> Max 10% withdrawal per month.</p>
                         </div>
                         <label class="block text-sm text-gray-400 mb-2">Amount to Withdraw ($)</label>
                         <input type="number" class="w-full bg-dark-800 border border-gray-700 text-white rounded-lg p-3 mb-6 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00">
@@ -224,7 +238,6 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // FIREBASE KEYS
         const firebaseConfig = {
             apiKey: "AIzaSyA5L7rCBjooJNdnpO1BqiUhauUAynBlvp8",
             authDomain: "emareld-capital.firebaseapp.com",
@@ -245,21 +258,14 @@
                 document.getElementById('main-app').classList.remove('hidden-section');
                 document.getElementById('user-name').innerText = user.displayName;
                 document.getElementById('user-avatar').src = user.photoURL;
-                switchTab('terminal'); // Default tab set to Terminal now
+                switchTab('terminal'); 
             } else {
                 document.getElementById('login-screen').classList.remove('hidden-section');
                 document.getElementById('main-app').classList.add('hidden-section');
             }
         });
 
-        function loginWithGoogle() {
-            auth.signInWithPopup(provider).catch((error) => {
-                const errorMsg = document.getElementById('login-error');
-                errorMsg.innerText = "Error: " + error.message;
-                errorMsg.classList.remove('hidden-section');
-            });
-        }
-
+        function loginWithGoogle() { auth.signInWithPopup(provider).catch(e => console.error(e)); }
         function logout() { auth.signOut(); }
 
         function switchTab(tabId) {
@@ -269,68 +275,109 @@
         }
 
         // ==========================================
-        // TRADE EXECUTION & JOURNAL LOGIC
+        // TRADE EXECUTION, ACTIVE TRADES & JOURNAL LOGIC
         // ==========================================
-        let trades = [];
+        let activeTrades = [];
+        let tradeHistory = [];
 
-        function executeTrade(type) {
-            // Frontend demo doesn't have live API price fetching inherently, so we generate a mock fill price around 2350 for demonstration
+        function openTrade(type) {
             let mockPrice = (2350.00 + (Math.random() * 10 - 5)).toFixed(2);
-            
-            // Add spread logic
             if (type === 'BUY') { mockPrice = (parseFloat(mockPrice) + 0.05).toFixed(2); }
 
             const trade = {
+                id: Date.now(), // unique ID for closing
                 time: new Date().toLocaleString(),
                 symbol: "XAUUSD",
                 type: type,
-                price: mockPrice
+                entryPrice: mockPrice
             };
 
-            trades.push(trade);
-            updateJournalTable();
-            document.getElementById('total-trades-stat').innerText = trades.length;
-            
-            // Show alert and visually switch to Journal to show it worked
-            alert(`${type} order executed for XAUUSD at $${mockPrice}`);
-            switchTab('journal');
+            activeTrades.push(trade);
+            renderActiveTrades();
         }
 
-        function updateJournalTable() {
-            const tbody = document.getElementById('journal-body');
-            tbody.innerHTML = ""; // Clear table
-            
-            // Reverse so newest trades are at the top
-            const reversedTrades = [...trades].reverse();
+        function closeTrade(id) {
+            // Find trade in active array
+            const index = activeTrades.findIndex(t => t.id === id);
+            if (index > -1) {
+                const trade = activeTrades[index];
+                
+                // Generate a mock close price slightly different from entry
+                trade.closePrice = (parseFloat(trade.entryPrice) + (Math.random() * 10 - 5)).toFixed(2);
+                
+                // Move to history
+                tradeHistory.push(trade);
+                activeTrades.splice(index, 1);
+                
+                // Update UIs
+                renderActiveTrades();
+                renderJournalTable();
+                document.getElementById('total-trades-stat').innerText = tradeHistory.length;
+            }
+        }
 
-            reversedTrades.forEach(t => {
+        function renderActiveTrades() {
+            const tbody = document.getElementById('active-trades-body');
+            tbody.innerHTML = ""; 
+            
+            if (activeTrades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-500">No active trades.</td></tr>';
+                return;
+            }
+
+            activeTrades.forEach(t => {
+                let actionColor = t.type === 'BUY' ? 'text-emerald-400' : 'text-red-400';
+                tbody.innerHTML += `
+                    <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                        <td class="p-4 font-semibold text-white">${t.symbol}</td>
+                        <td class="p-4 font-bold ${actionColor}">${t.type}</td>
+                        <td class="p-4 font-mono text-gray-300">$${t.entryPrice}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="closeTrade(${t.id})" class="bg-gray-700 hover:bg-red-500 text-white px-4 py-1 rounded text-sm transition-colors">Close</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderJournalTable() {
+            const tbody = document.getElementById('journal-body');
+            tbody.innerHTML = ""; 
+            
+            if (tradeHistory.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">No closed trades yet.</td></tr>';
+                return;
+            }
+
+            const reversedHistory = [...tradeHistory].reverse();
+            reversedHistory.forEach(t => {
                 let actionColor = t.type === 'BUY' ? 'text-emerald-400' : 'text-red-400';
                 tbody.innerHTML += `
                     <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
                         <td class="p-4 text-sm text-gray-400">${t.time}</td>
                         <td class="p-4 font-semibold text-white">${t.symbol}</td>
                         <td class="p-4 font-bold ${actionColor}">${t.type}</td>
-                        <td class="p-4 font-mono text-gray-300">$${t.price}</td>
+                        <td class="p-4 font-mono text-gray-300">$${t.entryPrice}</td>
+                        <td class="p-4 font-mono text-white">$${t.closePrice}</td>
                     </tr>
                 `;
             });
         }
 
         function exportToExcel() {
-            if (trades.length === 0) {
-                alert("No trades to export!");
+            if (tradeHistory.length === 0) {
+                alert("No closed trades to export!");
                 return;
             }
 
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Time,Symbol,Action,Entry Price\n"; // Header row
+            csvContent += "Time,Symbol,Action,Entry Price,Close Price\n"; 
 
-            trades.forEach(function(t) {
-                let row = `"${t.time}","${t.symbol}","${t.type}","${t.price}"`;
+            tradeHistory.forEach(function(t) {
+                let row = `"${t.time}","${t.symbol}","${t.type}","${t.entryPrice}","${t.closePrice}"`;
                 csvContent += row + "\n";
             });
 
-            // Trigger file download
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
@@ -347,23 +394,16 @@
             const method = document.getElementById('payment-method').value;
             const form = document.getElementById('deposit-form');
             const details = document.getElementById('payment-details');
-            
             if (!method) { form.classList.add('hidden-section'); return; }
             form.classList.remove('hidden-section');
-            
-            if (method === 'upi') {
-                details.innerHTML = "<span class='text-emerald-400'>UPI ID:</span> emeraldcapital@ybl<br>Scan from any app (GPay, PhonePe).";
-            } else if (method === 'bank') {
-                details.innerHTML = "<span class='text-emerald-400'>Bank:</span> HDFC Bank<br><span class='text-emerald-400'>A/C:</span> 5010023456789<br><span class='text-emerald-400'>IFSC:</span> HDFC0001234";
-            } else if (method === 'crypto') {
-                details.innerHTML = "<span class='text-emerald-400'>USDT (TRC20):</span><br>T9xD3...[Random Address]...Fq8P<br><span class='text-red-400 text-xs'>Send only USDT on TRON network.</span>";
-            }
+            if (method === 'upi') details.innerHTML = "<span class='text-emerald-400'>UPI ID:</span> emeraldcapital@ybl<br>Scan from any app.";
+            else if (method === 'bank') details.innerHTML = "<span class='text-emerald-400'>Bank:</span> HDFC Bank<br><span class='text-emerald-400'>A/C:</span> 5010023456789";
+            else if (method === 'crypto') details.innerHTML = "<span class='text-emerald-400'>USDT (TRC20):</span><br>T9xD3...[Random]...Fq8P";
         }
-
         function submitPayment() {
-            const amount = document.getElementById('deposit-amount').value;
-            if(!amount || amount <= 0) { alert("Please enter a valid amount."); return; }
-            alert(`Payment of $${amount} submitted for verification. Admin notified.`);
+            const amt = document.getElementById('deposit-amount').value;
+            if(!amt || amt <= 0) return alert("Enter valid amount.");
+            alert(`Payment of $${amt} submitted.`);
         }
     </script>
 </body>
